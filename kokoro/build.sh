@@ -20,7 +20,7 @@ set -e
 set -x
 
 deviceIds=${1:-'Nexus5,Pixel2,Pixel3,Nexus9'}
-osVersionIds=${2:-'23,27,30'}
+osVersionIds=${2:-'27,30'}
 
 GRADLE_FLAGS=()
 if [[ -n "$GRADLE_DEBUG" ]]; then
@@ -35,8 +35,11 @@ echo y | ${ANDROID_HOME}/tools/bin/sdkmanager --licenses
 
 cd $KOKORO_ARTIFACTS_DIR/git/nowinandroid
 
-# The build needs Java 11, set it as the default Java version.
-sudo update-java-alternatives --set java-1.11.0-openjdk-amd64
+# The build needs Java 17, set it as the default Java version.
+sudo apt-get update
+sudo apt-get install -y openjdk-17-jdk
+sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+java -version
 
 # Also clear JAVA_HOME variable so java -version is used instead
 export JAVA_HOME=
@@ -58,12 +61,12 @@ run_firebase_test_lab() {
   set +e # To not exit on an error to retry flaky tests
   local counter=0
   local result=1
-  local module=$1
+  local testApk=$1
   while [ $result != 0 -a $counter -lt $MAX_RETRY ]; do
     gcloud firebase test android run \
       --type instrumentation \
-      --app  "app/build/outputs/apk/debug/app-debug.apk" \
-      --test "$module/build/outputs/apk/androidTest/debug/$module-debug-androidTest.apk" \
+      --app  "app/build/outputs/apk/demo/debug/app-demo-debug.apk" \
+      --test "$testApk" \
       --device-ids $deviceIds \
       --os-version-ids $osVersionIds \
       --locales en \
@@ -76,17 +79,14 @@ run_firebase_test_lab() {
 
 
 # All modules with androidTest to run tests on.
-# This command will create a list like ["app", "sync"] based on which subdirectories
-# (assumed to be modules) have an androidTest source directory.
-# The sed regex pulls out the module name from the matched directory
-modules=($(find . -regex ".*/src/androidTest" | sed -E 's|\./([^/]*)/.*|\1|g'))
+testApks=($(./gradlew -q demoDebugPrintTestApk))
 
 # Run all modules in parallel with Firebase Test Lab, and fail if any fail
 pids=""
 result=0
 
-for module in ${modules[@]}; do
-  run_firebase_test_lab $module &
+for testApk in ${testApks[@]}; do
+  run_firebase_test_lab $testApk &
   pids="$pids $!"
 done
 

@@ -17,45 +17,69 @@
 pluginManagement {
     includeBuild("build-logic")
     repositories {
-        google()
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         mavenCentral()
         gradlePluginPortal()
     }
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
     repositories {
-        // Register the AndroidX snapshot repository first so snapshots don't attempt (and fail)
-        // to download from the non-snapshot repositories
-        maven(url = "https://androidx.dev/snapshots/builds/8455591/artifacts/repository") {
+        google {
             content {
-                // The AndroidX snapshot repository will only have androidx artifacts, don't
-                // bother trying to find other ones
-                includeGroupByRegex("androidx\\..*")
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
             }
         }
-        google()
         mavenCentral()
     }
 }
 rootProject.name = "nowinandroid"
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":app")
 include(":app-nia-catalog")
-include(":benchmark")
-include(":core-common")
-include(":core-data")
-include(":core-data-test")
-include(":core-database")
-include(":core-datastore")
-include(":core-datastore-test")
-include(":core-model")
-include(":core-navigation")
-include(":core-network")
-include(":core-ui")
-include(":core-testing")
-include(":feature-author")
-include(":feature-foryou")
-include(":feature-interests")
-include(":feature-topic")
-include(":sync")
+include(":benchmarks")
+include(":core:analytics")
+include(":core:common")
+include(":core:data")
+include(":core:data-test")
+include(":core:database")
+include(":core:datastore")
+include(":core:datastore-proto")
+include(":core:datastore-test")
+include(":core:designsystem")
+include(":core:domain")
+include(":core:model")
+include(":core:network")
+include(":core:notifications")
+include(":core:screenshot-testing")
+include(":core:testing")
+include(":core:ui")
+
+include(":feature:foryou")
+include(":feature:interests")
+include(":feature:bookmarks")
+include(":feature:topic")
+include(":feature:search")
+include(":feature:settings")
+include(":lint")
+include(":sync:work")
+include(":sync:sync-test")
+include(":ui-test-hilt-manifest")
+
+check(JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
+    """
+    Now in Android requires JDK 17+ but it is currently using JDK ${JavaVersion.current()}.
+    Java Home: [${System.getProperty("java.home")}]
+    https://developer.android.com/build/jdks#jdk-config-in-studio
+    """.trimIndent()
+}
